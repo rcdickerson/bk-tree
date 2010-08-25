@@ -7,7 +7,8 @@ type (Metric a) = a -> a -> Int
 
 data BKNode a = Empty 
               | BKNode { bknValue :: a
-                       , bknChildren :: [(Int, (BKNode a))]
+                       , bknDistance :: Int
+                       , bknChildren :: [(BKNode a)]
                        }
 
 data BKTree a = BKTree { bktMetric :: Metric a
@@ -19,52 +20,52 @@ instance Show a => Show (BKTree a) where
 
 instance Show a => Show (BKNode a) where
   show Empty = ""
-  show (BKNode value children) = (show value) ++ childStr
+  show (BKNode value dist children) = (show value) ++ childStr
     where 
       childStr = case children of 
                    [] -> ""
                    otherwise -> showChildren
       showChildren = "[" ++ (concat $ intersperse ", " $ 
-                      map (show.snd) children) ++ "]"
+                      map show children) ++ "]"
 
 insert :: (BKTree a) -> a -> (BKTree a)
-insert (BKTree metric root) a = BKTree metric newRoot
-  where newRoot = nInsert metric root a
+insert (BKTree metric root) ins = BKTree metric newRoot
+  where newRoot = nInsert metric root ins
 
 nInsert :: (Metric a) -> (BKNode a) -> a -> (BKNode a)
-nInsert _ Empty a = BKNode a []
-nInsert metric (BKNode b children) a = 
-  let distance = metric a b
-  in case (Prelude.lookup distance children) of
-       Nothing   -> BKNode b $ (distance, (BKNode a [])):children
-       Just node -> BKNode b $ 
-           addToAL children distance (nInsert metric node a)
-
--- From John Goerzen's Data.List.Utils package
-addToAL :: Eq key => [(key, elt)] -> key -> elt -> [(key, elt)]
-addToAL l key value = (key, value) : delFromAL l key
-
-delFromAL :: Eq key => [(key, a)] -> key -> [(key, a)]
-delFromAL l key = filter (\a -> (fst a) /= key) l
---
-
-bkLookup :: (BKTree a) -> a -> Int -> [a]
-bkLookup (BKTree metric root) a maxDist = filter withinDist results
+nInsert _ Empty a = BKNode a 0 []
+nInsert metric (BKNode val dist children) ins = BKNode val dist newChildren
   where
-    withinDist x = (metric a x) <= maxDist
-    results = nLookup 1 metric maxDist root
+    distance = metric ins val
+    newChildren = case (lookupChildWithDist children distance) of
+       Nothing   -> (BKNode ins distance []):children
+       Just node -> (nInsert metric node ins):
+               (filter (\n->(bknDistance n) /= distance) children)
 
-nLookup :: Int -> (Metric a) -> Int -> (BKNode a) -> [a]
-nLookup _ _ _ Empty = []
-nLookup n metric d (BKNode a children) = concat (matches:childMatches)
-  where
-    matches = between (d-n) (d+n) children 
-    childMatches = map ((nLookup (n+1) metric d).snd) children
+lookupChildWithDist :: [(BKNode a)] -> Int -> Maybe (BKNode a)
+lookupChildWithDist [] _ = Nothing
+lookupChildWithDist (n:ns) dist = if (bknDistance n) == dist
+                                    then Just n
+                                    else lookupChildWithDist ns dist
 
-between :: Int -> Int -> [(Int, (BKNode a))] -> [a]
-between low high list = map (bknValue.snd) $ filter (isBetween.fst) list
-  where
-    isBetween dist = dist >= low && dist <= high
+bkLookup :: (BKTree a) -> Int -> a -> [a]
+bkLookup (BKTree metric root) maxDist target =
+  let
+    rootDist = metric target (bknValue root)
+    lowDist = rootDist - maxDist
+    highDist = rootDist + maxDist
+    
+    inDistance node = (bknDistance node) >= lowDist 
+                   && (bknDistance node) <= highDist
+    childrenInDist = filter inDistance (bknChildren root)  
+ 
+    lookupOnChild child = bkLookup (BKTree metric child) maxDist target
+
+    childLookups = concat $ map lookupOnChild childrenInDist
+  in
+    if (rootDist <= maxDist)
+      then (bknValue root) : childLookups
+      else childLookups
 
 testMetric :: Int -> Int -> Int
 testMetric i1 i2 = abs $ i2 - i1
