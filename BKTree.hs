@@ -1,4 +1,9 @@
-module BKTree
+module BKTree (Metric,
+               BKTree,
+               mkBkTree,
+               bkInsert,
+               bkLookup)
+               
   where
 
 import Data.List (intersperse)
@@ -15,6 +20,9 @@ data BKTree a = BKTree { bktMetric :: Metric a
                        , bktRoot   :: BKNode a  
                        }
 
+mkBkTree :: (Metric a) -> (BKTree a)
+mkBkTree metric = BKTree metric Empty
+
 instance Show a => Show (BKTree a) where
   show (BKTree _ root) = show root
 
@@ -28,8 +36,8 @@ instance Show a => Show (BKNode a) where
       showChildren = "[" ++ (concat $ intersperse ", " $ 
                       map show children) ++ "]"
 
-insert :: (BKTree a) -> a -> (BKTree a)
-insert (BKTree metric root) ins = BKTree metric newRoot
+bkInsert :: (BKTree a) -> a -> (BKTree a)
+bkInsert (BKTree metric root) ins = BKTree metric newRoot
   where newRoot = nInsert metric root ins
 
 nInsert :: (Metric a) -> (BKNode a) -> a -> (BKNode a)
