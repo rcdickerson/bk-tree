@@ -1,23 +1,45 @@
+-- A simple BK-Tree implementation.
+--
+-- Copyright (c) 2014 Rob Dickerson
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+
 module BKTree (Metric,
                BKTree,
                mkBkTree,
                bkInsert,
                bkLookup)
-               
+
   where
 
 import Data.List (intersperse)
 
 type (Metric a) = a -> a -> Int
 
-data BKNode a = Empty 
+data BKNode a = Empty
               | BKNode { bknValue :: a
                        , bknDistance :: Int
                        , bknChildren :: [(BKNode a)]
                        }
 
 data BKTree a = BKTree { bktMetric :: Metric a
-                       , bktRoot   :: BKNode a  
+                       , bktRoot   :: BKNode a
                        }
 
 mkBkTree :: (Metric a) -> (BKTree a)
@@ -29,11 +51,11 @@ instance Show a => Show (BKTree a) where
 instance Show a => Show (BKNode a) where
   show Empty = ""
   show (BKNode value dist children) = (show value) ++ childStr
-    where 
-      childStr = case children of 
+    where
+      childStr = case children of
                    [] -> ""
                    otherwise -> showChildren
-      showChildren = "[" ++ (concat $ intersperse ", " $ 
+      showChildren = "[" ++ (concat $ intersperse ", " $
                       map show children) ++ "]"
 
 bkInsert :: (BKTree a) -> a -> (BKTree a)
@@ -62,11 +84,11 @@ bkLookup (BKTree metric root) maxDist target =
     rootDist = metric target (bknValue root)
     lowDist = rootDist - maxDist
     highDist = rootDist + maxDist
-    
-    inDistance node = (bknDistance node) >= lowDist 
+
+    inDistance node = (bknDistance node) >= lowDist
                    && (bknDistance node) <= highDist
-    childrenInDist = filter inDistance (bknChildren root)  
- 
+    childrenInDist = filter inDistance (bknChildren root)
+
     lookupOnChild child = bkLookup (BKTree metric child) maxDist target
 
     childLookups = concat $ map lookupOnChild childrenInDist
