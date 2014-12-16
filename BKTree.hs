@@ -38,16 +38,16 @@ instance Show a => Show (BKNode a) where
 
 bkInsert :: (BKTree a) -> a -> (BKTree a)
 bkInsert (BKTree metric root) ins = BKTree metric newRoot
-  where newRoot = nInsert metric root ins
+  where newRoot = insert metric root ins
 
-nInsert :: (Metric a) -> (BKNode a) -> a -> (BKNode a)
-nInsert _ Empty a = BKNode a 0 []
-nInsert metric (BKNode val dist children) ins = BKNode val dist newChildren
+insert :: (Metric a) -> (BKNode a) -> a -> (BKNode a)
+insert _ Empty a = BKNode a 0 []
+insert metric (BKNode val dist children) ins = BKNode val dist newChildren
   where
     distance = metric ins val
     newChildren = case (lookupChildWithDist children distance) of
        Nothing   -> (BKNode ins distance []):children
-       Just node -> (nInsert metric node ins):
+       Just node -> (insert metric node ins):
                (filter (\n->(bknDistance n) /= distance) children)
 
 lookupChildWithDist :: [(BKNode a)] -> Int -> Maybe (BKNode a)
@@ -74,6 +74,3 @@ bkLookup (BKTree metric root) maxDist target =
     if (rootDist <= maxDist)
       then (bknValue root) : childLookups
       else childLookups
-
-testMetric :: Int -> Int -> Int
-testMetric i1 i2 = abs $ i2 - i1
